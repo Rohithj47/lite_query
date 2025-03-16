@@ -1,18 +1,15 @@
-import { useState } from "react";
-import "./App.css";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import Home from "./Home";
+import PostDetail from "./PostDetail";
 
-function App() {
-  const [count, setCount] = useState(0);
-
+const App = () => {
   return (
-    <>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-      </div>
-    </>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/posts/:id" element={<PostDetail />} />
+    </Routes>
   );
-}
+};
 
 export default App;
