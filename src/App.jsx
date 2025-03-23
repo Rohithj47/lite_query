@@ -154,24 +154,29 @@ const QueryDevTools = () => {
       className="bg-dark text-light py-4 d-flex flex-column align-items-center"
       style={{ position: "fixed", bottom: 0, width: "100%" }}
     >
-      {[...queryClient.queries]
-        .sort((a, b) => (a.queryHash > b.queryHash ? 1 : -1))
-        .map((query) => {
-          return (
-            <div key={query.queryHash} style={{ marginBottom: "10px" }}>
-              <strong>Query Key:</strong> {query.queryKey.join(", ")}
-              <br />
-              <strong>Is Loading:</strong>{" "}
-              {query.state.isLoading ? "Yes" : "No"}
-              <br />
-              <strong>Is Error:</strong> {query.state.isError ? "Yes" : "No"}
-              <br />
-              <strong>Is Fetching:</strong>{" "}
-              {query.state.isFetching ? "Yes" : "No"}
-              <br />
-            </div>
-          );
-        })}
+      <ListGroup className="w-75 mb-3">
+        {[...queryClient.queries]
+          // Sort based on query.lastFetched to show the most recently fetched queries first
+          .sort((a, b) => (b.lastFetched || 0) - (a.lastFetched || 0))
+
+          .map((query) => {
+            return (
+              <>
+                <ListGroup.Item className="bg-secondary text-light">
+                  <strong>Query Key:</strong> {query.queryKey.join(", ")}
+                  <pre>
+                    {JSON.stringify(
+                      (() => {
+                        const { data: _, ...rest } = query.state;
+                        return rest;
+                      })()
+                    )}
+                  </pre>
+                </ListGroup.Item>
+              </>
+            );
+          })}
+      </ListGroup>
     </Container>
   );
 };
