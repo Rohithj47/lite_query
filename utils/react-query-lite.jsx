@@ -10,9 +10,18 @@ export const QueryClientProvider = ({ children, client }) => {
   );
 };
 
+export const useQueryClient = () => {
+  const client = React.useContext(QueryClientContext);
+  if (!client) {
+    throw new Error("useQueryClient must be used within a QueryClientProvider");
+  }
+  return client;
+};
+
 export class QueryClient {
   constructor() {
     this.queries = [];
+    this.subscribers = [];
   }
 
   getQuery = (options) => {
@@ -25,9 +34,20 @@ export class QueryClient {
 
     return query;
   };
+
+  subscribe = (callback) => {
+    this.subscribers.push(callback);
+    return () => {
+      this.subscribers = this.subscribers.filter((sub) => sub !== callback);
+    };
+  };
+
+  notify = () => {
+    this.subscribers.forEach((subscriber) => subscriber());
+  };
 }
 
-export const useQuery = ({ queryKey, queryFn }) => {
+export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
   const client = React.useContext(QueryClientContext);
 
   const [, rerender] = React.useReducer((i) => i + 1, 0);
@@ -48,12 +68,13 @@ export const useQuery = ({ queryKey, queryFn }) => {
   return observer.current.getResult();
 };
 
-const createQuery = (client, { queryKey, queryFn }) => {
+const createQuery = (client, { queryKey, queryFn, staleTime }) => {
   let query = {
     queryKey,
     queryHash: JSON.stringify(queryKey),
     promise: null,
     subscribers: [],
+    lastFetched: null,
     state: {
       data: undefined,
       isLoading: true,
@@ -71,6 +92,7 @@ const createQuery = (client, { queryKey, queryFn }) => {
     setState: (updater) => {
       query.state = updater(query.state);
       query.subscribers.forEach((subscriber) => subscriber.notify());
+      client.notify();
     },
     fetch: async () => {
       if (!query.promise) {
@@ -88,6 +110,7 @@ const createQuery = (client, { queryKey, queryFn }) => {
             query.setState((prev) => ({
               ...prev,
               isSuccess: true,
+              lastFetched: Date.now(),
               data,
             }));
           } catch (error) {
@@ -116,7 +139,7 @@ const createQuery = (client, { queryKey, queryFn }) => {
   return query;
 };
 
-const createQueryObserver = (client, { queryKey, queryFn }) => {
+const createQueryObserver = (client, { queryKey, queryFn, staleTime = 0 }) => {
   const query = client.getQuery({ queryKey, queryFn });
 
   const observer = {
@@ -126,13 +149,19 @@ const createQueryObserver = (client, { queryKey, queryFn }) => {
       observer.notify = callback;
       const unsubscribe = query.subscribe(observer);
 
-      query.fetch();
+      observer.fetch();
 
       return unsubscribe;
+    },
+    fetch: () => {
+      if (
+        !query.state.lastFetched ||
+        Date.now() - query.state.lastFetched > staleTime
+      ) {
+        query.fetch();
+      }
     },
   };
 
   return observer;
 };
-
-export function ReactQueryDevtools() {}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { use } from "react";
 import { Routes, Route } from "react-router-dom";
 // import {
 //   QueryClient,
@@ -10,6 +10,7 @@ import {
   QueryClient,
   QueryClientProvider,
   useQuery,
+  useQueryClient,
 } from "../utils/react-query-lite"; // Custom React Query implementation
 import { Container, ListGroup, Spinner, Card, Button } from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/posts/:id" element={<PostDetail />} />
       </Routes>
+      <QueryDevTools />
     </QueryClientProvider>
   );
 };
@@ -58,6 +60,7 @@ const Home = () => {
   } = useQuery({
     queryKey: ["posts"],
     queryFn: getPosts,
+    staleTime: 5 * 1000 * 60, // 5 minutes
   });
   return (
     <Container fluid className="bg-dark text-light min-vh-100 py-4">
@@ -103,6 +106,7 @@ const PostDetail = () => {
   } = useQuery({
     queryKey: ["post", id],
     queryFn: () => getPost(id),
+    staleTime: 3000, // 3 seconds
   });
 
   return (
@@ -131,6 +135,43 @@ const PostDetail = () => {
           </Card.Body>
         </Card>
       )}
+    </Container>
+  );
+};
+
+const QueryDevTools = () => {
+  const queryClient = useQueryClient(); // Get the query client from the context
+
+  const [, rerender] = React.useReducer((i) => i + 1, 0); // Force re-render on state change
+
+  React.useEffect(() => {
+    return queryClient.subscribe(rerender);
+  });
+
+  return (
+    <Container
+      fluid
+      className="bg-dark text-light py-4 d-flex flex-column align-items-center"
+      style={{ position: "fixed", bottom: 0, width: "100%" }}
+    >
+      {[...queryClient.queries]
+        .sort((a, b) => (a.queryHash > b.queryHash ? 1 : -1))
+        .map((query) => {
+          return (
+            <div key={query.queryHash} style={{ marginBottom: "10px" }}>
+              <strong>Query Key:</strong> {query.queryKey.join(", ")}
+              <br />
+              <strong>Is Loading:</strong>{" "}
+              {query.state.isLoading ? "Yes" : "No"}
+              <br />
+              <strong>Is Error:</strong> {query.state.isError ? "Yes" : "No"}
+              <br />
+              <strong>Is Fetching:</strong>{" "}
+              {query.state.isFetching ? "Yes" : "No"}
+              <br />
+            </div>
+          );
+        })}
     </Container>
   );
 };
