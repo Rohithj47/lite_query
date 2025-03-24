@@ -157,7 +157,9 @@ const QueryDevTools = () => {
       <ListGroup className="w-75 mb-3">
         {[...queryClient.queries]
           // Sort based on query.lastFetched to show the most recently fetched queries first
-          .sort((a, b) => (b.lastFetched || 0) - (a.lastFetched || 0))
+          .sort(
+            (a, b) => (b.state.lastFetched || 0) - (a.state.lastFetched || 0)
+          )
 
           .map((query) => {
             return (
