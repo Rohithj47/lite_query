@@ -54,7 +54,11 @@ export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
 
   const observer = React.useRef();
   if (!observer.current) {
-    observer.current = createQueryObserver(client, { queryKey, queryFn });
+    observer.current = createQueryObserver(client, {
+      queryKey,
+      queryFn,
+      staleTime,
+    });
   }
 
   React.useEffect(() => {
@@ -68,13 +72,12 @@ export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
   return observer.current.getResult();
 };
 
-const createQuery = (client, { queryKey, queryFn, staleTime }) => {
+const createQuery = (client, { queryKey, queryFn }) => {
   let query = {
     queryKey,
     queryHash: JSON.stringify(queryKey),
     promise: null,
     subscribers: [],
-    lastFetched: null,
     state: {
       data: undefined,
       isLoading: true,
@@ -82,6 +85,7 @@ const createQuery = (client, { queryKey, queryFn, staleTime }) => {
       isFetching: true,
       isSuccess: false,
       error: undefined,
+      lastFetched: null,
     },
     subscribe: (subscriber) => {
       query.subscribers.push(subscriber);
@@ -149,17 +153,14 @@ const createQueryObserver = (client, { queryKey, queryFn, staleTime = 0 }) => {
       observer.notify = callback;
       const unsubscribe = query.subscribe(observer);
 
-      observer.fetch();
-
-      return unsubscribe;
-    },
-    fetch: () => {
       if (
         !query.state.lastFetched ||
         Date.now() - query.state.lastFetched > staleTime
       ) {
         query.fetch();
       }
+
+      return unsubscribe;
     },
   };
 

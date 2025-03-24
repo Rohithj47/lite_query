@@ -60,7 +60,7 @@ const Home = () => {
   } = useQuery({
     queryKey: ["posts"],
     queryFn: getPosts,
-    staleTime: 5 * 1000 * 60, // 5 minutes
+    staleTime: 5000, // 5 seconds
   });
   return (
     <Container fluid className="bg-dark text-light min-vh-100 py-4">
@@ -106,7 +106,7 @@ const PostDetail = () => {
   } = useQuery({
     queryKey: ["post", id],
     queryFn: () => getPost(id),
-    staleTime: 3000, // 3 seconds
+    staleTime: 5000, // 5 seconds
   });
 
   return (
