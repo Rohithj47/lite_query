@@ -34,20 +34,9 @@ export class QueryClient {
 
     return query;
   };
-
-  subscribe = (callback) => {
-    this.subscribers.push(callback);
-    return () => {
-      this.subscribers = this.subscribers.filter((sub) => sub !== callback);
-    };
-  };
-
-  notify = () => {
-    this.subscribers.forEach((subscriber) => subscriber());
-  };
 }
 
-export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
+export const useQuery = ({ queryKey, queryFn }) => {
   const client = React.useContext(QueryClientContext);
 
   const [, rerender] = React.useReducer((i) => i + 1, 0);
@@ -68,7 +57,7 @@ export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
   return observer.current.getResult();
 };
 
-const createQuery = (client, { queryKey, queryFn, staleTime }) => {
+const createQuery = (client, { queryKey, queryFn }) => {
   let query = {
     queryKey,
     queryHash: JSON.stringify(queryKey),
@@ -92,7 +81,6 @@ const createQuery = (client, { queryKey, queryFn, staleTime }) => {
     setState: (updater) => {
       query.state = updater(query.state);
       query.subscribers.forEach((subscriber) => subscriber.notify());
-      client.notify();
     },
     fetch: async () => {
       if (!query.promise) {
@@ -139,7 +127,7 @@ const createQuery = (client, { queryKey, queryFn, staleTime }) => {
   return query;
 };
 
-const createQueryObserver = (client, { queryKey, queryFn, staleTime = 0 }) => {
+const createQueryObserver = (client, { queryKey, queryFn }) => {
   const query = client.getQuery({ queryKey, queryFn });
 
   const observer = {
@@ -149,17 +137,9 @@ const createQueryObserver = (client, { queryKey, queryFn, staleTime = 0 }) => {
       observer.notify = callback;
       const unsubscribe = query.subscribe(observer);
 
-      observer.fetch();
+      query.fetch();
 
       return unsubscribe;
-    },
-    fetch: () => {
-      if (
-        !query.state.lastFetched ||
-        Date.now() - query.state.lastFetched > staleTime
-      ) {
-        query.fetch();
-      }
     },
   };
 

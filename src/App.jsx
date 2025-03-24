@@ -10,7 +10,6 @@ import {
   QueryClient,
   QueryClientProvider,
   useQuery,
-  useQueryClient,
 } from "../utils/react-query-lite"; // Custom React Query implementation
 import { Container, ListGroup, Spinner, Card, Button } from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
@@ -24,7 +23,6 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/posts/:id" element={<PostDetail />} />
       </Routes>
-      <QueryDevTools />
     </QueryClientProvider>
   );
 };
@@ -60,7 +58,6 @@ const Home = () => {
   } = useQuery({
     queryKey: ["posts"],
     queryFn: getPosts,
-    staleTime: 5 * 1000 * 60, // 5 minutes
   });
   return (
     <Container fluid className="bg-dark text-light min-vh-100 py-4">
@@ -106,7 +103,6 @@ const PostDetail = () => {
   } = useQuery({
     queryKey: ["post", id],
     queryFn: () => getPost(id),
-    staleTime: 3000, // 3 seconds
   });
 
   return (
@@ -135,48 +131,6 @@ const PostDetail = () => {
           </Card.Body>
         </Card>
       )}
-    </Container>
-  );
-};
-
-const QueryDevTools = () => {
-  const queryClient = useQueryClient(); // Get the query client from the context
-
-  const [, rerender] = React.useReducer((i) => i + 1, 0); // Force re-render on state change
-
-  React.useEffect(() => {
-    return queryClient.subscribe(rerender);
-  });
-
-  return (
-    <Container
-      fluid
-      className="bg-dark text-light py-4 d-flex flex-column align-items-center"
-      style={{ position: "fixed", bottom: 0, width: "100%" }}
-    >
-      <ListGroup className="w-75 mb-3">
-        {[...queryClient.queries]
-          // Sort based on query.lastFetched to show the most recently fetched queries first
-          .sort((a, b) => (b.lastFetched || 0) - (a.lastFetched || 0))
-
-          .map((query) => {
-            return (
-              <>
-                <ListGroup.Item className="bg-secondary text-light">
-                  <strong>Query Key:</strong> {query.queryKey.join(", ")}
-                  <pre>
-                    {JSON.stringify(
-                      (() => {
-                        const { data: _, ...rest } = query.state;
-                        return rest;
-                      })()
-                    )}
-                  </pre>
-                </ListGroup.Item>
-              </>
-            );
-          })}
-      </ListGroup>
     </Container>
   );
 };
