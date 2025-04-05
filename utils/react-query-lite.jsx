@@ -47,7 +47,7 @@ export class QueryClient {
   };
 }
 
-export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
+export const useQuery = ({ queryKey, queryFn, staleTime = 0, cacheTime }) => {
   const client = React.useContext(QueryClientContext);
 
   const [, rerender] = React.useReducer((i) => i + 1, 0);
@@ -58,6 +58,7 @@ export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
       queryKey,
       queryFn,
       staleTime,
+      cacheTime,
     });
   }
 
@@ -72,12 +73,20 @@ export const useQuery = ({ queryKey, queryFn, staleTime = 0 }) => {
   return observer.current.getResult();
 };
 
-const createQuery = (client, { queryKey, queryFn }) => {
+const createQuery = (
+  client,
+  {
+    queryKey,
+    queryFn,
+    cacheTime = 5 * 60 * 1000 /* default cache time of 5 minutes */,
+  }
+) => {
   let query = {
     queryKey,
     queryHash: JSON.stringify(queryKey),
     promise: null,
     subscribers: [],
+    gcTimeout: null,
     state: {
       data: undefined,
       isLoading: true,
@@ -89,9 +98,25 @@ const createQuery = (client, { queryKey, queryFn }) => {
     },
     subscribe: (subscriber) => {
       query.subscribers.push(subscriber);
+
+      // everytime a new subscriber is added, clear the GC timeout
+      if (query.gcTimeout) {
+        clearTimeout(query.gcTimeout);
+        query.gcTimeout = null; // reset the timeout
+      }
+
       return () => {
         query.subscribers = query.subscribers.filter((s) => s !== subscriber);
+
+        if (query.subscribers.length === 0) {
+          query.scheduleGC(); // schedule garbage collection if no subscribers left
+        }
       };
+    },
+    scheduleGC: () => {
+      query.gcTimeout = setTimeout(() => {
+        client.queries = client.queries.filter((q) => q !== query); // remove from client queries
+      }, cacheTime); // schedule garbage collection after cacheTime
     },
     setState: (updater) => {
       query.state = updater(query.state);
@@ -143,8 +168,11 @@ const createQuery = (client, { queryKey, queryFn }) => {
   return query;
 };
 
-const createQueryObserver = (client, { queryKey, queryFn, staleTime = 0 }) => {
-  const query = client.getQuery({ queryKey, queryFn });
+const createQueryObserver = (
+  client,
+  { queryKey, queryFn, staleTime = 0, cacheTime }
+) => {
+  const query = client.getQuery({ queryKey, queryFn, cacheTime });
 
   const observer = {
     notify: () => {},
