@@ -1,6 +1,6 @@
 # A light weight Tanstack Query implementation
 
-If you've ever been curious about the implemtation of Tanstack Query, here's a an easy implemntation to play around with.
+If you've ever been curious about the implemtation of Tanstack Query, here's a an easy implemtation to play around with.
 
 Heavily inspired from Tanner Linsley's [Let's Build React Query in 150 Lines of Code!](https://www.youtube.com/watch?v=9SrIirrnwk0&t=1154s)
 
